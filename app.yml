@@ -1,8 +1,8 @@
 settings:
-  APP_DISPLAY_NAME: Element X
-  PRODUCTION_APP_NAME: Element
-  APP_GROUP_IDENTIFIER: group.io.element
-  BASE_BUNDLE_IDENTIFIER: io.element.elementx
+  APP_DISPLAY_NAME: Fresco
+  PRODUCTION_APP_NAME: Fresco
+  APP_GROUP_IDENTIFIER: group.systems.zem.fresco
+  BASE_BUNDLE_IDENTIFIER: systems.zem.fresco
   ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: "colors/accent-color"
   DEVELOPMENT_TEAM: 7J4U792NQT
   IS_NIGHTLY_BUILD: false

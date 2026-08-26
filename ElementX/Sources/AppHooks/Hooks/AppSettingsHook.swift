@@ -14,6 +14,29 @@ nonisolated protocol AppSettingsHookProtocol: Sendable {
 
 struct DefaultAppSettingsHook: AppSettingsHookProtocol {
     func configure(_ appSettings: AppSettings) -> AppSettings {
-        appSettings
+        appSettings.override(
+            accountProviders: ["chat.zem.systems"],
+            allowOtherAccountProviders: false,
+            hideBrandChrome: false,
+            pushGatewayBaseURL: URL(string: "https://chat.zem.systems")!,
+            oAuthRedirectURL: URL(string: "https://chat.zem.systems/oauth/ios/\(InfoPlistReader.main.bundleIdentifier)")!,
+            oAuthClientURIPath: "apps/ios",
+            websiteURL: URL(string: "https://fresco.zem.systems")!,
+            logoURL: URL(string: "https://fresco.zem.systems/brand/icon.svg")!,
+            copyrightURL: appSettings.copyrightURL,
+            acceptableUseURL: appSettings.acceptableUseURL,
+            privacyURL: appSettings.privacyURL,
+            encryptionURL: appSettings.encryptionURL,
+            deviceVerificationURL: appSettings.deviceVerificationURL,
+            chatBackupDetailsURL: appSettings.chatBackupDetailsURL,
+            identityPinningViolationDetailsURL: appSettings.identityPinningViolationDetailsURL,
+            historySharingDetailsURL: appSettings.historySharingDetailsURL,
+            elementWebHosts: ["fresco.zem.systems", "chat.zem.systems"],
+            accountProvisioningHost: "chat.zem.systems",
+            bugReportApplicationID: "fresco-ios",
+            analyticsTermsURL: appSettings.analyticsTermsURL,
+            mapTilerConfiguration: AppSettings.bundledMapTilerConfiguration
+        )
+        return appSettings
     }
 }

@@ -51,7 +51,9 @@ targets:
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
       debug:
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)
       release:
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)
 
     sources:
     - path: ../Sources

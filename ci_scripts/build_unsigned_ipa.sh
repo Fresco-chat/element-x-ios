@@ -21,9 +21,11 @@ xcodebuild build \
   PROVISIONING_PROFILE_SPECIFIER= \
   PROVISIONING_PROFILE=
 
-APP_PATH="$(find "$DERIVED/Build/Products/Release-iphoneos" -name 'ElementX.app' -type d | head -1)"
+PRODUCTS_DIR="$DERIVED/Build/Products/Release-iphoneos"
+# PRODUCT_NAME follows APP_DISPLAY_NAME (Fresco.app), not the Xcode target name (ElementX).
+APP_PATH="$(find "$PRODUCTS_DIR" -maxdepth 1 -name '*.app' -type d | head -1)"
 if [ ! -d "$APP_PATH" ]; then
-  echo "error: ElementX.app not found under $DERIVED/Build/Products/Release-iphoneos" >&2
+  echo "error: no .app bundle found under $PRODUCTS_DIR" >&2
   find "$DERIVED" -name '*.app' >&2 || true
   exit 1
 fi

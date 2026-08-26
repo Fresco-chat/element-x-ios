@@ -84,6 +84,15 @@ jobs:
       - name: Configure Fresco production build
         run: swift run -q tools ci configure-production
 
+      - name: Verify App Lock keychain failure handling
+        run: |
+          set -euo pipefail
+          mkdir -p test_output
+          swift run -q tools run-tests \
+            --scheme UnitTests \
+            --test-name AppLockServiceTests/keychainAccessErrorDoesNotEnableAppLock \
+            --retries 2
+
       - name: Build unsigned IPA (AltStore / sideload)
         if: steps.signing.outputs.mode == 'unsigned'
         run: |

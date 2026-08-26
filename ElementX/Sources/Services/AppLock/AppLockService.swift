@@ -30,11 +30,25 @@ class AppLockService: AppLockServiceProtocol {
     
     var isEnabled: Bool {
         do {
-            return try keychainController.containsPINCode()
+            let containsPIN = try keychainController.containsPINCode()
+            // #region agent log
+            DebugAgentLog.write(hypothesisId: "H1",
+                                location: "AppLockService.swift:isEnabled",
+                                message: "Keychain PIN probe succeeded",
+                                data: ["containsPIN": String(containsPIN)])
+            // #endregion
+            return containsPIN
         } catch {
             MXLog.error("Keychain access error: \(error)")
-            MXLog.error("Locking the app.")
-            return true
+            // #region agent log
+            DebugAgentLog.write(hypothesisId: "H1",
+                                location: "AppLockService.swift:isEnabled",
+                                message: "Keychain PIN probe failed; treating App Lock as disabled",
+                                data: ["error": String(describing: error)])
+            // #endregion
+            // Fail open: if keychain is unavailable (e.g. sideload entitlement mismatch),
+            // do not show an unlock screen for a PIN that cannot be read or verified.
+            return false
         }
     }
     

@@ -1,0 +1,107 @@
+name: Verify App Lock Keychain Fix
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - fresco/branding
+    paths:
+      - ElementX/Sources/Services/AppLock/**
+      - ElementX/Sources/Other/DebugAgentLog.swift
+      - UnitTests/Sources/AppLock/**
+      - .github/workflows/verify-app-lock-fix.yml
+      - .github/workflows/build-ipa.yml
+
+  pull_request:
+    paths:
+      - ElementX/Sources/Services/AppLock/**
+      - ElementX/Sources/Other/DebugAgentLog.swift
+      - UnitTests/Sources/AppLock/**
+      - .github/workflows/verify-app-lock-fix.yml
+      - .github/workflows/build-ipa.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-app-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app-lock-keychain-test:
+    name: App Lock keychain failure test
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          submodules: false
+          persist-credentials: false
+
+      - name: Fetch Git LFS from element-hq upstream
+        run: |
+          set -euo pipefail
+          git lfs install
+          git config lfs.url https://github.com/element-hq/element-x-ios.git/info/lfs
+          git lfs pull origin
+
+      - name: Setup build environment
+        run: source ci_scripts/ci_common.sh && setup_github_actions_environment
+
+      - name: Configure Fresco production build
+        run: swift run -q tools ci configure-production
+
+      - name: Run App Lock keychain failure unit test
+        run: |
+          set -euo pipefail
+          mkdir -p test_output .cursor
+          export CURSOR_DEBUG_LOG_PATH="$GITHUB_WORKSPACE/.cursor/debug-83240d.log"
+          swift run -q tools run-tests \
+            --scheme UnitTests \
+            --test-name AppLockServiceTests/keychainAccessErrorDoesNotEnableAppLock \
+            --retries 2
+
+      - name: Write verification log entry
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import json, os, time
+          log_path = os.environ["CURSOR_DEBUG_LOG_PATH"]
+          payload = {
+              "sessionId": "83240d",
+              "runId": "post-fix",
+              "hypothesisId": "H1",
+              "location": ".github/workflows/verify-app-lock-fix.yml",
+              "message": "AppLockServiceTests/keychainAccessErrorDoesNotEnableAppLock passed on macOS runner",
+              "data": {
+                  "github_sha": os.environ.get("GITHUB_SHA", ""),
+                  "github_ref": os.environ.get("GITHUB_REF", ""),
+              },
+              "timestamp": int(time.time() * 1000),
+          }
+          with open(log_path, "a", encoding="utf-8") as f:
+              f.write(json.dumps(payload) + "\n")
+          PY
+        env:
+          CURSOR_DEBUG_LOG_PATH: ${{ github.workspace }}/.cursor/debug-83240d.log
+
+      - name: Upload debug verification log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-lock-debug-log-${{ github.sha }}
+          path: .cursor/debug-83240d.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload unit test results on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-lock-unit-test-results-${{ github.sha }}
+          path: test_output/UnitTests.xcresult
+          retention-days: 3
+          if-no-files-found: ignore

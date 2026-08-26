@@ -30,6 +30,19 @@ final class AppLockServiceTests {
     // MARK: - PIN Code
     
     @Test
+    func keychainAccessErrorDoesNotEnableAppLock() {
+        // Given a keychain that cannot be read (e.g. AltStore entitlement mismatch).
+        let keychainController = KeychainControllerMock()
+        keychainController.containsPINCodeThrowableError = NSError(domain: NSOSStatusErrorDomain,
+                                                                   code: Int(errSecMissingEntitlement),
+                                                                   userInfo: nil)
+        service = AppLockService(keychainController: keychainController, appSettings: appSettings)
+        
+        // Then App Lock must stay disabled so the app is not bricked behind a bogus PIN screen.
+        #expect(!service.isEnabled, "Keychain errors must not force App Lock on.")
+    }
+    
+    @Test
     func validPINCode() {
         // Given a service that hasn't been enabled.
         #expect(!service.isEnabled, "The service shouldn't be enabled to begin with.")

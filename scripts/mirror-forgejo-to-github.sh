@@ -25,6 +25,15 @@ if [ -d "$SRC_DIR/.git" ]; then
   git -C "$SRC_DIR" push --force \
     "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_ORG}/${GITHUB_REPO}.git" \
     develop fresco/branding
+  if command -v git-lfs >/dev/null 2>&1 || git lfs version >/dev/null 2>&1; then
+    echo "==> pushing Git LFS objects (may take a while on first sync)"
+    git -C "$SRC_DIR" lfs install
+    git -C "$SRC_DIR" lfs push \
+      "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_ORG}/${GITHUB_REPO}.git" \
+      --all 2>/dev/null || echo "warn: LFS push incomplete — CI fetches LFS from element-hq upstream"
+  else
+    echo "warn: git-lfs not installed; CI fetches LFS from element-hq upstream"
+  fi
   gh repo edit "${GITHUB_ORG}/${GITHUB_REPO}" --default-branch fresco/branding
   echo "OK → https://github.com/${GITHUB_ORG}/${GITHUB_REPO}"
   exit 0

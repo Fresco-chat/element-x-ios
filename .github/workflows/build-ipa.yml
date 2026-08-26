@@ -21,9 +21,20 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: nschloe/action-cached-lfs-checkout@385a8ecc719e50b8c71af6ab01a624b486b7c3bc # v1.2.5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea3d69f2c9d2f499b5c9 # v4.2.2
         with:
+          lfs: false
+          submodules: false
           persist-credentials: false
+
+      - name: Fetch Git LFS from element-hq upstream
+        run: |
+          set -euo pipefail
+          git lfs install
+          git remote add element-upstream https://github.com/element-hq/element-x-ios.git
+          # Fresco branches share LFS history with upstream develop; fetch that ref set.
+          git lfs fetch element-upstream develop
+          git lfs checkout
 
       - name: Setup build environment
         run: source ci_scripts/ci_common.sh && setup_github_actions_environment

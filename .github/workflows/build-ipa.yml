@@ -33,7 +33,7 @@ jobs:
           git lfs install
           git remote add element-upstream https://github.com/element-hq/element-x-ios.git
           # Fresco branches share LFS history with upstream develop; fetch that ref set.
-          git lfs fetch element-upstream develop
+          git lfs fetch element-upstream refs/heads/develop
           git lfs checkout
 
       - name: Setup build environment

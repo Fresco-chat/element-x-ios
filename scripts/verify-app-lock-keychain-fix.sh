@@ -11,7 +11,7 @@ mkdir -p test_output "$(dirname "$LOG_PATH")"
 export CURSOR_DEBUG_LOG_PATH="$LOG_PATH"
 
 echo "Running AppLockService keychain-failure unit test..."
-swift run -q tools run-tests \
+swift run -q tools ci run-tests \
   --scheme UnitTests \
   --test-name AppLockServiceTests/keychainAccessErrorDoesNotEnableAppLock \
   --retries 2

@@ -59,7 +59,7 @@ jobs:
           set -euo pipefail
           mkdir -p test_output .cursor
           export CURSOR_DEBUG_LOG_PATH="$GITHUB_WORKSPACE/.cursor/debug-83240d.log"
-          swift run -q tools run-tests \
+          swift run -q tools ci run-tests \
             --scheme UnitTests \
             --test-name AppLockServiceTests/keychainAccessErrorDoesNotEnableAppLock \
             --retries 2

@@ -120,6 +120,19 @@ struct CI: ParsableCommand {
         }
     }
     
+    // MARK: - Project configuration
+
+    /// Regenerates `Secrets.swift` from env vars when Enterprise/Pipeline is available.
+    /// Public forks without the private Enterprise submodule skip this step.
+    static func updateFossSecretsIfAvailable() async throws {
+        let pipelinePackage = URL.projectDirectory.appending(component: "Enterprise/Pipeline/Package.swift")
+        guard FileManager.default.fileExists(atPath: pipelinePackage.path()) else {
+            logger.info("Skipping pipeline update-foss-secrets (Enterprise submodule not present)")
+            return
+        }
+        try await run(.name("swift"), ["run", "pipeline", "update-foss-secrets"])
+    }
+
     // MARK: - Shell Interaction
     
     @discardableResult

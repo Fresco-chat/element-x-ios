@@ -16,7 +16,7 @@ struct ConfigureNightly: AsyncParsableCommand {
         
         try addNightlyVariant()
         
-        try await CI.run(.name("swift"), ["run", "pipeline", "update-foss-secrets"])
+        try await CI.updateFossSecretsIfAvailable()
         try await CI.run(.name("xcodegen"))
         
         try await generateAppIconBanner(buildNumber: buildNumber)

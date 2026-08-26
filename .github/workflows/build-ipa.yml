@@ -2,6 +2,14 @@ name: Build IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      signing:
+        description: IPA signing mode
+        type: choice
+        options:
+          - unsigned
+          - signed
+        default: unsigned
   push:
     branches:
       - fresco/branding
@@ -16,7 +24,7 @@ concurrency:
 
 jobs:
   build-ipa:
-    name: Archive and export IPA
+    name: Build IPA
     runs-on: macos-26
     timeout-minutes: 90
 
@@ -38,17 +46,31 @@ jobs:
       - name: Setup build environment
         run: source ci_scripts/ci_common.sh && setup_github_actions_environment
 
+      - name: Choose signing mode
+        id: signing
+        env:
+          DISPATCH_SIGNING: ${{ github.event_name == 'workflow_dispatch' && inputs.signing }}
+          HAS_SIGNING_SECRETS: ${{ secrets.BUILD_CERTIFICATE_BASE64 != '' }}
+        run: |
+          set -euo pipefail
+          if [ "${DISPATCH_SIGNING:-}" = "signed" ]; then
+            if [ "${HAS_SIGNING_SECRETS}" != "true" ]; then
+              echo "::error::Signed builds need BUILD_CERTIFICATE_BASE64, P12_PASSWORD, and KEYCHAIN_PASSWORD repository secrets."
+              exit 1
+            fi
+            echo "mode=signed" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=unsigned" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Import Apple signing certificate
+        if: steps.signing.outputs.mode == 'signed'
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "${BUILD_CERTIFICATE_BASE64:-}" ]; then
-            echo "::error::Set repository secrets BUILD_CERTIFICATE_BASE64, P12_PASSWORD, and KEYCHAIN_PASSWORD (Apple Development .p12)."
-            exit 1
-          fi
           CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
@@ -62,13 +84,25 @@ jobs:
       - name: Configure Fresco production build
         run: swift run -q tools ci configure-production
 
-      - name: Archive ElementX
+      - name: Build unsigned IPA (AltStore / sideload)
+        if: steps.signing.outputs.mode == 'unsigned'
+        run: |
+          set -euo pipefail
+          export DERIVED_DATA_PATH="$RUNNER_TEMP/DerivedData"
+          export EXPORT_DIR="$RUNNER_TEMP/ipa-export"
+          bash ci_scripts/build_unsigned_ipa.sh
+          echo "EXPORT_DIR=$EXPORT_DIR" >> "$GITHUB_ENV"
+          echo "IPA_ARTIFACT_NAME=fresco-ios-unsigned-${{ github.sha }}" >> "$GITHUB_ENV"
+
+      - name: Archive and export signed IPA
+        if: steps.signing.outputs.mode == 'signed'
         env:
           DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
         run: |
           set -euo pipefail
           TEAM_ID="${DEVELOPMENT_TEAM:-7J4U792NQT}"
           ARCHIVE_PATH="$RUNNER_TEMP/ElementX.xcarchive"
+          EXPORT_DIR="$RUNNER_TEMP/ipa-export"
           xcodebuild archive \
             -project ElementX.xcodeproj \
             -scheme ElementX \
@@ -77,15 +111,6 @@ jobs:
             CODE_SIGN_STYLE=Automatic \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             -allowProvisioningUpdates
-          echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
-
-      - name: Export IPA
-        env:
-          DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPER_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          EXPORT_DIR="$RUNNER_TEMP/ipa-export"
-          TEAM_ID="${DEVELOPMENT_TEAM:-7J4U792NQT}"
           /usr/libexec/PlistBuddy -c "Set :teamID $TEAM_ID" ci_scripts/ExportOptions-development.plist
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
@@ -94,11 +119,12 @@ jobs:
             -allowProvisioningUpdates
           ls -la "$EXPORT_DIR"
           echo "EXPORT_DIR=$EXPORT_DIR" >> "$GITHUB_ENV"
+          echo "IPA_ARTIFACT_NAME=fresco-ios-signed-${{ github.sha }}" >> "$GITHUB_ENV"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: fresco-ios-ipa-${{ github.sha }}
+          name: ${{ env.IPA_ARTIFACT_NAME }}
           path: ${{ env.EXPORT_DIR }}/*.ipa
           retention-days: 14
           if-no-files-found: error

@@ -126,7 +126,7 @@ struct CI: ParsableCommand {
     /// Public forks without the private Enterprise submodule skip this step.
     static func updateFossSecretsIfAvailable() async throws {
         let pipelinePackage = URL.projectDirectory.appending(component: "Enterprise/Pipeline/Package.swift")
-        guard FileManager.default.fileExists(atPath: pipelinePackage.path()) else {
+        guard FileManager.default.fileExists(atPath: pipelinePackage.path) else {
             logger.info("Skipping pipeline update-foss-secrets (Enterprise submodule not present)")
             return
         }

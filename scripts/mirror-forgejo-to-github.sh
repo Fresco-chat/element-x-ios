@@ -18,12 +18,25 @@ if ! gh repo view "${GITHUB_ORG}/${GITHUB_REPO}" >/dev/null 2>&1; then
   gh repo create "${GITHUB_ORG}/${GITHUB_REPO}" --public --confirm
 fi
 
+# Push Fresco branches only (full --mirror hits GitHub limits on upstream tag history).
+SRC_DIR="${SRC_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+if [ -d "$SRC_DIR/.git" ]; then
+  echo "==> pushing branches from $SRC_DIR → ${GITHUB_ORG}/${GITHUB_REPO}"
+  git -C "$SRC_DIR" push --force \
+    "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_ORG}/${GITHUB_REPO}.git" \
+    develop fresco/branding
+  gh repo edit "${GITHUB_ORG}/${GITHUB_REPO}" --default-branch fresco/branding
+  echo "OK → https://github.com/${GITHUB_ORG}/${GITHUB_REPO}"
+  exit 0
+fi
+
 tmp="$(mktemp -d)"
 work="$tmp/${FORGEJO_REPO}.git"
 
-echo "==> ${FORGEJO_ORG}/${FORGEJO_REPO} → ${GITHUB_ORG}/${GITHUB_REPO}"
+echo "==> ${FORGEJO_ORG}/${FORGEJO_REPO} → ${GITHUB_ORG}/${GITHUB_REPO} (mirror fallback)"
 git clone --mirror "${FORGEJO_GIT}/${FORGEJO_REPO}.git" "$work"
 git -C "$work" push --mirror \
   "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_ORG}/${GITHUB_REPO}.git"
 rm -rf "$tmp"
+gh repo edit "${GITHUB_ORG}/${GITHUB_REPO}" --default-branch fresco/branding 2>/dev/null || true
 echo "OK → https://github.com/${GITHUB_ORG}/${GITHUB_REPO}"

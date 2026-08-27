@@ -8,7 +8,6 @@ on:
       - fresco/branding
     paths:
       - ElementX/Sources/Services/AppLock/**
-      - ElementX/Sources/Other/DebugAgentLog.swift
       - UnitTests/Sources/AppLock/**
       - .github/workflows/verify-app-lock-fix.yml
       - .github/workflows/build-ipa.yml
@@ -16,7 +15,6 @@ on:
   pull_request:
     paths:
       - ElementX/Sources/Services/AppLock/**
-      - ElementX/Sources/Other/DebugAgentLog.swift
       - UnitTests/Sources/AppLock/**
       - .github/workflows/verify-app-lock-fix.yml
       - .github/workflows/build-ipa.yml
